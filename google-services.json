@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1005549204720",
+    "project_id": "weather-monitor-iot",
+    "storage_bucket": "weather-monitor-iot.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1005549204720:android:fb2cbe8b483c0ca84e7e35",
+        "android_client_info": {
+          "package_name": "weather.monitor.iot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATw9Niq4SSdDT_juSH6zRy3f_Ke6iHyds"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

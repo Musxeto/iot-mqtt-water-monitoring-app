@@ -1,112 +1,157 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, SafeAreaView, StatusBar } from 'react-native';
 
 import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
 
-export default function TabTwoScreen() {
+export default function InfoScreen() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#1c2331" />
+
+      {/* HEADER */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>ℹ️ System Information</Text>
+        <Text style={styles.subHeader}>Water Quality Monitoring System</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <ThemedView style={styles.infoCard}>
+          <ThemedText type="subtitle" style={styles.cardTitle}>About This App</ThemedText>
+          <ThemedText style={styles.cardText}>
+            This IoT Dashboard connects to a HiveMQ MQTT broker to receive real-time water quality
+            data from your Wokwi simulation. The app monitors 6 key parameters for water safety.
+          </ThemedText>
+        </ThemedView>
+
+        <Collapsible title="🌡️ Temperature">
+          <ThemedText style={styles.collapsibleText}>
+            Monitors water temperature in Celsius. Optimal range for most applications is 15-25°C.
+            Extreme temperatures can affect water quality and aquatic life.
+          </ThemedText>
+        </Collapsible>
+
+        <Collapsible title="💧 Humidity">
+          <ThemedText style={styles.collapsibleText}>
+            Measures ambient humidity percentage around the water source. High humidity can indicate
+            evaporation issues or environmental concerns.
+          </ThemedText>
+        </Collapsible>
+
+        <Collapsible title="⚗️ pH Level">
+          <ThemedText style={styles.collapsibleText}>
+            Measures water acidity/alkalinity on a scale of 0-14. Safe drinking water pH is 6.5-8.5.
+            Values outside this range trigger a WARNING alert.
+          </ThemedText>
+        </Collapsible>
+
+        <Collapsible title="🧪 Nitrate">
+          <ThemedText style={styles.collapsibleText}>
+            Measures nitrate concentration in parts per million (ppm). Safe limit is below 50 ppm.
+            High nitrates indicate contamination from fertilizers or sewage.
+          </ThemedText>
+        </Collapsible>
+
+        <Collapsible title="🌫️ Turbidity">
+          <ThemedText style={styles.collapsibleText}>
+            Measures water clarity as a percentage. Lower turbidity means clearer water.
+            High turbidity can indicate sediment, algae, or other particles.
+          </ThemedText>
+        </Collapsible>
+
+        <Collapsible title="📊 Water Level">
+          <ThemedText style={styles.collapsibleText}>
+            Monitors the water tank level as a percentage. Levels below 20% trigger a WARNING
+            to indicate low water supply.
+          </ThemedText>
+        </Collapsible>
+
+        <ThemedView style={styles.connectionCard}>
+          <ThemedText type="subtitle" style={styles.cardTitle}>🔗 MQTT Connection</ThemedText>
+          <ThemedText style={styles.connectionText}>Broker: broker.hivemq.com</ThemedText>
+          <ThemedText style={styles.connectionText}>Port: 8000 (WebSockets)</ThemedText>
+          <ThemedText style={styles.connectionText}>Topic: semester_project/water_quality</ThemedText>
+        </ThemedView>
+
+        <ThemedView style={styles.troubleshootCard}>
+          <ThemedText type="subtitle" style={styles.cardTitle}>🔧 Troubleshooting</ThemedText>
+          <ThemedText style={styles.cardText}>
+            • &quot;Connected&quot; but no data? Ensure your Wokwi simulation is running.{'\n'}
+            • &quot;Failed to Connect&quot;? Try using mobile data if on restricted WiFi.{'\n'}
+            • Values not changing? Rotate the potentiometers in Wokwi.
+          </ThemedText>
+        </ThemedView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: '#f4f4f9',
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  header: {
+    padding: 20,
+    backgroundColor: '#1c2331',
+    alignItems: 'center',
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    elevation: 5,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  subHeader: {
+    color: '#aab',
+    marginTop: 5,
+    fontSize: 12,
+  },
+  scrollContainer: {
+    padding: 15,
+    paddingBottom: 30,
+  },
+  infoCard: {
+    backgroundColor: '#fff',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 15,
+    elevation: 2,
+  },
+  connectionCard: {
+    backgroundColor: '#e3f2fd',
+    padding: 20,
+    borderRadius: 15,
+    marginTop: 15,
+    marginBottom: 15,
+    borderLeftWidth: 5,
+    borderLeftColor: '#1976d2',
+  },
+  troubleshootCard: {
+    backgroundColor: '#fff3e0',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 15,
+    borderLeftWidth: 5,
+    borderLeftColor: '#ff9800',
+  },
+  cardTitle: {
+    marginBottom: 10,
+    color: '#1c2331',
+  },
+  cardText: {
+    color: '#555',
+    lineHeight: 22,
+  },
+  connectionText: {
+    color: '#1976d2',
+    fontFamily: 'monospace',
+    marginBottom: 5,
+  },
+  collapsibleText: {
+    color: '#555',
+    lineHeight: 22,
   },
 });
