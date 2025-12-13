@@ -1,16 +1,16 @@
 // Firestore service for Water Quality sensor data
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  orderBy, 
-  limit, 
-  getDocs,
-  Timestamp,
-  onSnapshot,
-  where
-} from 'firebase/firestore';
 import { db } from '@/config/firebase';
+import {
+    addDoc,
+    collection,
+    getDocs,
+    limit,
+    onSnapshot,
+    orderBy,
+    query,
+    Timestamp,
+    where
+} from 'firebase/firestore';
 
 // Sensor data type
 export interface SensorData {
@@ -153,7 +153,7 @@ export const getDailyStats = async () => {
   };
   
   readings.forEach((reading) => {
-    (Object.keys(stats) as Array<keyof typeof stats>).forEach((key) => {
+    (Object.keys(stats) as (keyof typeof stats)[]).forEach((key) => {
       const value = reading[key] as number;
       if (value < stats[key].min) stats[key].min = value;
       if (value > stats[key].max) stats[key].max = value;
@@ -162,7 +162,7 @@ export const getDailyStats = async () => {
   });
   
   // Calculate averages
-  (Object.keys(stats) as Array<keyof typeof stats>).forEach((key) => {
+  (Object.keys(stats) as (keyof typeof stats)[]).forEach((key) => {
     stats[key].avg = Math.round((stats[key].total / readings.length) * 100) / 100;
   });
   

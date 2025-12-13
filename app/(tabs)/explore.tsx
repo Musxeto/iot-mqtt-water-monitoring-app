@@ -1,8 +1,8 @@
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, StatusBar } from 'react-native';
+import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 
-import { Collapsible } from '@/components/ui/collapsible';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { Collapsible } from '@/components/ui/collapsible';
 
 export default function InfoScreen() {
   return (
@@ -73,12 +73,24 @@ export default function InfoScreen() {
           <ThemedText style={styles.connectionText}>Topic: semester_project/water_quality</ThemedText>
         </ThemedView>
 
+        <ThemedView style={styles.firebaseCard}>
+          <ThemedText type="subtitle" style={styles.cardTitle}>🔥 Firebase Integration</ThemedText>
+          <ThemedText style={styles.connectionText}>Project: weather-monitor-iot</ThemedText>
+          <ThemedText style={styles.connectionText}>Database: Cloud Firestore</ThemedText>
+          <ThemedText style={styles.connectionText}>Sync Interval: Every 30 seconds</ThemedText>
+          <ThemedText style={styles.cardText}>
+            {'\n'}All sensor data is automatically saved to Firebase Firestore for historical
+            analysis. View the History tab to see past readings and statistics.
+          </ThemedText>
+        </ThemedView>
+
         <ThemedView style={styles.troubleshootCard}>
           <ThemedText type="subtitle" style={styles.cardTitle}>🔧 Troubleshooting</ThemedText>
           <ThemedText style={styles.cardText}>
             • &quot;Connected&quot; but no data? Ensure your Wokwi simulation is running.{'\n'}
             • &quot;Failed to Connect&quot;? Try using mobile data if on restricted WiFi.{'\n'}
-            • Values not changing? Rotate the potentiometers in Wokwi.
+            • Values not changing? Rotate the potentiometers in Wokwi.{'\n'}
+            • Firebase not syncing? Check your internet connection.
           </ThemedText>
         </ThemedView>
       </ScrollView>
@@ -128,6 +140,14 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderLeftWidth: 5,
     borderLeftColor: '#1976d2',
+  },
+  firebaseCard: {
+    backgroundColor: '#fff8e1',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 15,
+    borderLeftWidth: 5,
+    borderLeftColor: '#ff9800',
   },
   troubleshootCard: {
     backgroundColor: '#fff3e0',

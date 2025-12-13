@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, StatusBar, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { getLatestReadings, saveSensorReading } from '@/services/firestore';
 import Paho from 'paho-mqtt';
-import { saveSensorReading, getLatestReadings, SensorReading } from '@/services/firestore';
+import React, { useEffect, useRef, useState } from 'react';
+import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 
 // --- CONFIGURATION ---
 // MUST match your Python code exactly
@@ -10,8 +10,7 @@ const MQTT_PORT = 8000; // WebSockets Port (Not 1883)
 const MQTT_TOPIC = 'semester_project/water_quality';
 const CLIENT_ID = 'ReactNative_App_' + Math.random().toString(16).substr(2, 8);
 
-// Save to Firebase every N seconds (to avoid too many writes)
-const FIREBASE_SAVE_INTERVAL = 30000; // 30 seconds
+// Save every incoming payload to Firebase (no throttling)
 
 // --- SENSOR DATA TYPE ---
 interface SensorData {
@@ -52,7 +51,6 @@ export default function HomeScreen() {
   const [previousData, setPreviousData] = useState<SensorData | null>(null);
   
   // Refs for tracking
-  const lastSaveTime = useRef<number>(0);
   const sensorDataRef = useRef<SensorData>(sensorData);
 
   // Keep ref updated with latest sensor data
@@ -60,17 +58,11 @@ export default function HomeScreen() {
     sensorDataRef.current = sensorData;
   }, [sensorData]);
 
-  // --- FIREBASE: Save data periodically ---
+  // --- FIREBASE: Save data on every message ---
   const saveToFirebase = async (data: SensorData) => {
-    const now = Date.now();
-    if (now - lastSaveTime.current < FIREBASE_SAVE_INTERVAL) {
-      return; // Skip if too soon
-    }
-    
     try {
       setFirebaseStatus('Syncing...');
       await saveSensorReading(data);
-      lastSaveTime.current = now;
       setLastSyncTime(new Date());
       setFirebaseStatus('Synced ✓');
       setReadingCount(prev => prev + 1);
