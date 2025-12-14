@@ -1,16 +1,16 @@
 // Firestore service for Water Quality sensor data
 import { db } from '@/config/firebase';
 import {
-    addDoc,
-    collection,
-    getCountFromServer,
-    getDocs,
-    limit,
-    onSnapshot,
-    orderBy,
-    query,
-    Timestamp,
-    where
+  addDoc,
+  collection,
+  getCountFromServer,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  Timestamp,
+  where
 } from 'firebase/firestore';
 
 // Sensor data type
