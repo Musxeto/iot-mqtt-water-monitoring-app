@@ -4,7 +4,8 @@ import { Colors } from '@/constants/colors';
 import { loadMQTTConfig, MQTTConfig, DEFAULT_MQTT_CONFIG } from '@/config/mqtt';
 import Paho from 'paho-mqtt';
 import React, { useEffect, useRef, useState } from 'react';
-import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const CLIENT_ID = 'ReactNative_App_' + Math.random().toString(16).substr(2, 8);
 
@@ -177,9 +178,11 @@ export default function HomeScreen() {
     return date.toLocaleTimeString();
   };
 
+  const insets = useSafeAreaInsets();
+
   // --- RENDER COMPONENT ---
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
       {/* HEADER */}
@@ -295,7 +298,7 @@ export default function HomeScreen() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -333,7 +336,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-    paddingTop: 35,
   },
   header: {
     padding: 20,

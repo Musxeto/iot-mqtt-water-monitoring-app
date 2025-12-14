@@ -19,7 +19,8 @@ export default function TabLayout() {
           borderTopColor: Colors.border,
           borderTopWidth: 1,
           paddingTop: 5,
-          height: 60,
+          paddingBottom: 8,
+          height: 70,
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -34,10 +35,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="history"
+        name="analytics"
         options={{
-          title: 'History',
-          tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={size} color={color} />,
+          title: 'Analytics',
+          tabBarIcon: ({ color, size }) => <Ionicons name="analytics" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -45,6 +46,12 @@ export default function TabLayout() {
         options={{
           title: 'Settings',
           tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="history"
+        options={{
+          href: null, // Hide old history tab
         }}
       />
       <Tabs.Screen

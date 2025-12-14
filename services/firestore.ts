@@ -52,7 +52,7 @@ export const saveSensorReading = async (data: SensorData): Promise<string> => {
 /**
  * Get the latest sensor readings
  */
-export const getLatestReadings = async (count: number = 50): Promise<SensorReading[]> => {
+export const getLatestReadings = async (count: number = 500): Promise<SensorReading[]> => {
   try {
     const q = query(
       collection(db, COLLECTION_NAME),
@@ -73,6 +73,33 @@ export const getLatestReadings = async (count: number = 50): Promise<SensorReadi
     return readings;
   } catch (error) {
     console.error('Error getting readings:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all sensor readings (no limit - use with caution)
+ */
+export const getAllReadings = async (): Promise<SensorReading[]> => {
+  try {
+    const q = query(
+      collection(db, COLLECTION_NAME),
+      orderBy('timestamp', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
+    const readings: SensorReading[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      readings.push({
+        id: doc.id,
+        ...doc.data()
+      } as SensorReading);
+    });
+    
+    return readings;
+  } catch (error) {
+    console.error('Error getting all readings:', error);
     throw error;
   }
 };
