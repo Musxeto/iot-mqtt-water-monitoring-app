@@ -1,4 +1,6 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getDailyStats, getLatestReadings, SensorReading } from '@/services/firestore';
+import { Colors } from '@/constants/colors';
 import { Timestamp } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -19,12 +21,12 @@ export default function HistoryScreen() {
   const [selectedSensor, setSelectedSensor] = useState<string>('temp');
 
   const sensorConfig = {
-    temp: { label: 'Temperature', unit: '°C', color: '#FF8800' },
-    humidity: { label: 'Humidity', unit: '%', color: '#0099CC' },
-    ph: { label: 'pH Level', unit: 'pH', color: '#9933CC' },
-    nitrate: { label: 'Nitrate', unit: 'ppm', color: '#CC0000' },
-    turbidity: { label: 'Turbidity', unit: '%', color: '#795548' },
-    level: { label: 'Water Level', unit: '%', color: '#0d47a1' },
+    temp: { label: 'Temperature', unit: '°C', color: Colors.temp, icon: 'thermometer' },
+    humidity: { label: 'Humidity', unit: '%', color: Colors.humidity, icon: 'water-percent' },
+    ph: { label: 'pH Level', unit: 'pH', color: Colors.ph, icon: 'flask' },
+    nitrate: { label: 'Nitrate', unit: 'ppm', color: Colors.nitrate, icon: 'molecule' },
+    turbidity: { label: 'Turbidity', unit: '%', color: Colors.turbidity, icon: 'blur' },
+    level: { label: 'Water Level', unit: '%', color: Colors.level, icon: 'water' },
   };
 
   const loadData = useCallback(async () => {
@@ -91,19 +93,25 @@ export default function HistoryScreen() {
     
     return (
       <View style={[styles.statsCard, { borderLeftColor: config.color }]}>
-        <Text style={[styles.statsTitle, { color: config.color }]}>
-          {config.label} Statistics (24h)
-        </Text>
+        <View style={styles.statsHeader}>
+          <MaterialCommunityIcons name={config.icon as keyof typeof MaterialCommunityIcons.glyphMap} size={20} color={config.color} />
+          <Text style={[styles.statsTitle, { color: config.color }]}>
+            {config.label} Statistics (24h)
+          </Text>
+        </View>
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
+            <Ionicons name="arrow-down" size={16} color={Colors.info} />
             <Text style={styles.statLabel}>Min</Text>
             <Text style={styles.statValue}>{sensorStats?.min?.toFixed(1) ?? '--'}{config.unit}</Text>
           </View>
           <View style={styles.statItem}>
+            <Ionicons name="analytics" size={16} color={Colors.primary} />
             <Text style={styles.statLabel}>Avg</Text>
             <Text style={[styles.statValue, styles.statValueHighlight]}>{sensorStats?.avg?.toFixed(1) ?? '--'}{config.unit}</Text>
           </View>
           <View style={styles.statItem}>
+            <Ionicons name="arrow-up" size={16} color={Colors.warning} />
             <Text style={styles.statLabel}>Max</Text>
             <Text style={styles.statValue}>{sensorStats?.max?.toFixed(1) ?? '--'}{config.unit}</Text>
           </View>
@@ -114,11 +122,14 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1c2331" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
       {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📊 Data History</Text>
+        <View style={styles.headerTop}>
+          <Ionicons name="bar-chart" size={28} color={Colors.primary} />
+          <Text style={styles.headerTitle}>Data History</Text>
+        </View>
         <Text style={styles.subHeader}>
           {readings.length} readings stored in Firebase
         </Text>
@@ -127,7 +138,12 @@ export default function HistoryScreen() {
       <ScrollView 
         contentContainerStyle={styles.scrollContainer}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
         }
       >
         {/* SENSOR SELECTOR */}
@@ -137,10 +153,15 @@ export default function HistoryScreen() {
               key={key}
               style={[
                 styles.sensorChip,
-                selectedSensor === key && { backgroundColor: config.color }
+                selectedSensor === key && { backgroundColor: config.color, borderColor: config.color }
               ]}
               onPress={() => setSelectedSensor(key)}
             >
+              <MaterialCommunityIcons 
+                name={config.icon as keyof typeof MaterialCommunityIcons.glyphMap} 
+                size={16} 
+                color={selectedSensor === key ? Colors.text : config.color} 
+              />
               <Text style={[
                 styles.sensorChipText,
                 selectedSensor === key && styles.sensorChipTextActive
@@ -156,7 +177,8 @@ export default function HistoryScreen() {
 
         {/* TIME FILTER */}
         <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Show:</Text>
+          <Ionicons name="time-outline" size={18} color={Colors.textMuted} />
+          <Text style={styles.filterLabel}>Filter:</Text>
           {(['1h', '6h', '24h', 'all'] as TimeFilter[]).map((filter) => (
             <TouchableOpacity
               key={filter}
@@ -178,15 +200,18 @@ export default function HistoryScreen() {
 
         {/* READINGS LIST */}
         <View style={styles.readingsContainer}>
-          <Text style={styles.sectionTitle}>
-            Recent Readings ({filteredReadings.length})
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="list" size={18} color={Colors.primary} />
+            <Text style={styles.sectionTitle}>
+              Recent Readings ({filteredReadings.length})
+            </Text>
+          </View>
           
           {loading ? (
-            <ActivityIndicator size="large" color="#1c2331" style={styles.loader} />
+            <ActivityIndicator size="large" color={Colors.primary} style={styles.loader} />
           ) : filteredReadings.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>📭</Text>
+              <Ionicons name="water-outline" size={60} color={Colors.textMuted} />
               <Text style={styles.emptyText}>No readings found</Text>
               <Text style={styles.emptySubtext}>
                 Start your Wokwi simulation to collect data
@@ -200,16 +225,26 @@ export default function HistoryScreen() {
               return (
                 <View key={reading.id || index} style={styles.readingCard}>
                   <View style={styles.readingHeader}>
-                    <Text style={styles.readingTime}>
-                      {formatTimestamp(reading.timestamp)}
-                    </Text>
+                    <View style={styles.readingTimeContainer}>
+                      <Ionicons name="time-outline" size={14} color={Colors.textMuted} />
+                      <Text style={styles.readingTime}>
+                        {formatTimestamp(reading.timestamp)}
+                      </Text>
+                    </View>
                     <View style={[styles.statusBadge, { 
-                      backgroundColor: reading.status?.includes('Normal') ? '#e8f5e9' : '#ffebee' 
+                      backgroundColor: reading.status?.includes('Normal') 
+                        ? 'rgba(34, 197, 94, 0.15)' 
+                        : 'rgba(239, 68, 68, 0.15)' 
                     }]}>
+                      <Ionicons 
+                        name={reading.status?.includes('Normal') ? 'checkmark-circle' : 'warning'} 
+                        size={12} 
+                        color={reading.status?.includes('Normal') ? Colors.success : Colors.error} 
+                      />
                       <Text style={[styles.statusBadgeText, {
-                        color: reading.status?.includes('Normal') ? '#2e7d32' : '#c62828'
+                        color: reading.status?.includes('Normal') ? Colors.success : Colors.error
                       }]}>
-                        {reading.status?.includes('Normal') ? '✓ OK' : '⚠ Alert'}
+                        {reading.status?.includes('Normal') ? 'OK' : 'Alert'}
                       </Text>
                     </View>
                   </View>
@@ -244,61 +279,75 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f9',
+    backgroundColor: Colors.background,
+    paddingTop: 35,
   },
   header: {
     padding: 20,
-    backgroundColor: '#1c2331',
+    backgroundColor: Colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  headerTop: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    elevation: 5,
+    gap: 10,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
+    color: Colors.text,
   },
   subHeader: {
-    color: '#aab',
-    marginTop: 5,
-    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 6,
+    fontSize: 13,
   },
   scrollContainer: {
-    padding: 15,
+    padding: 16,
     paddingBottom: 30,
   },
   sensorSelector: {
-    marginBottom: 15,
+    marginBottom: 16,
   },
   sensorChip: {
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     marginRight: 10,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   sensorChipText: {
     fontSize: 13,
-    color: '#666',
+    color: Colors.textSecondary,
     fontWeight: '500',
   },
   sensorChipTextActive: {
-    color: '#fff',
+    color: Colors.text,
   },
   statsCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
-    marginBottom: 15,
-    elevation: 2,
-    borderLeftWidth: 5,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  statsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
   },
   statsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 15,
+    fontSize: 15,
+    fontWeight: '600',
   },
   statsRow: {
     flexDirection: 'row',
@@ -306,55 +355,65 @@ const styles = StyleSheet.create({
   },
   statItem: {
     alignItems: 'center',
+    gap: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#888',
-    marginBottom: 5,
+    color: Colors.textMuted,
   },
   statValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.text,
   },
   statValueHighlight: {
-    fontSize: 24,
+    fontSize: 22,
+    color: Colors.primary,
   },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 16,
+    gap: 8,
   },
   filterLabel: {
     fontSize: 14,
-    color: '#666',
-    marginRight: 10,
+    color: Colors.textMuted,
+    marginRight: 4,
   },
   filterChip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 15,
-    backgroundColor: '#e0e0e0',
-    marginRight: 8,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   filterChipActive: {
-    backgroundColor: '#1c2331',
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   filterChipText: {
     fontSize: 12,
-    color: '#666',
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
   filterChipTextActive: {
-    color: '#fff',
+    color: Colors.text,
   },
   readingsContainer: {
-    marginTop: 10,
+    marginTop: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 15,
+    fontWeight: '600',
+    color: Colors.text,
   },
   loader: {
     marginTop: 50,
@@ -363,45 +422,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 50,
   },
-  emptyIcon: {
-    fontSize: 50,
-    marginBottom: 15,
-  },
   emptyText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    fontWeight: '600',
+    color: Colors.text,
+    marginTop: 16,
+    marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#888',
+    color: Colors.textMuted,
+    textAlign: 'center',
   },
   readingCard: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
-    padding: 15,
+    padding: 14,
     marginBottom: 10,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   readingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
+  },
+  readingTimeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   readingTime: {
     fontSize: 12,
-    color: '#888',
+    color: Colors.textMuted,
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 10,
   },
   statusBadgeText: {
     fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   readingValues: {
     flexDirection: 'row',
@@ -414,7 +480,7 @@ const styles = StyleSheet.create({
   },
   mainValueLabel: {
     fontSize: 11,
-    color: '#888',
+    color: Colors.textMuted,
   },
   mainValueText: {
     fontSize: 24,
@@ -425,7 +491,7 @@ const styles = StyleSheet.create({
   },
   otherValueText: {
     fontSize: 12,
-    color: '#666',
+    color: Colors.textSecondary,
     marginBottom: 2,
   },
 });

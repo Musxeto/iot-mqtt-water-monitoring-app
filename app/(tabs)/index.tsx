@@ -1,16 +1,12 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getLatestReadings, saveSensorReading } from '@/services/firestore';
+import { Colors } from '@/constants/colors';
+import { loadMQTTConfig, MQTTConfig, DEFAULT_MQTT_CONFIG } from '@/config/mqtt';
 import Paho from 'paho-mqtt';
 import React, { useEffect, useRef, useState } from 'react';
 import { SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 
-// --- CONFIGURATION ---
-// MUST match your Python code exactly
-const MQTT_BROKER = 'broker.hivemq.com';
-const MQTT_PORT = 8000; // WebSockets Port (Not 1883)
-const MQTT_TOPIC = 'semester_project/water_quality';
 const CLIENT_ID = 'ReactNative_App_' + Math.random().toString(16).substr(2, 8);
-
-// Save every incoming payload to Firebase (no throttling)
 
 // --- SENSOR DATA TYPE ---
 interface SensorData {
@@ -29,6 +25,7 @@ interface SensorCardProps {
   value: number;
   unit: string;
   color: string;
+  icon: React.ReactNode;
   isAlert?: boolean;
   trend?: 'up' | 'down' | 'stable';
 }
@@ -39,6 +36,7 @@ export default function HomeScreen() {
   const [firebaseStatus, setFirebaseStatus] = useState('Not synced');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [readingCount, setReadingCount] = useState(0);
+  const [mqttConfig, setMqttConfig] = useState<MQTTConfig>(DEFAULT_MQTT_CONFIG);
   const [sensorData, setSensorData] = useState<SensorData>({
     temp: 0,
     humidity: 0,
@@ -52,11 +50,25 @@ export default function HomeScreen() {
   
   // Refs for tracking
   const sensorDataRef = useRef<SensorData>(sensorData);
+  const clientRef = useRef<typeof Paho.Client.prototype | null>(null);
 
   // Keep ref updated with latest sensor data
   useEffect(() => {
     sensorDataRef.current = sensorData;
   }, [sensorData]);
+
+  // --- Load MQTT Config ---
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const config = await loadMQTTConfig();
+        setMqttConfig(config);
+      } catch {
+        console.log('Using default MQTT config');
+      }
+    };
+    loadConfig();
+  }, []);
 
   // --- FIREBASE: Save data on every message ---
   const saveToFirebase = async (data: SensorData) => {
@@ -64,7 +76,7 @@ export default function HomeScreen() {
       setFirebaseStatus('Syncing...');
       await saveSensorReading(data);
       setLastSyncTime(new Date());
-      setFirebaseStatus('Synced ✓');
+      setFirebaseStatus('Synced');
       setReadingCount(prev => prev + 1);
       console.log('Data saved to Firebase');
     } catch (error) {
@@ -91,12 +103,13 @@ export default function HomeScreen() {
 
   // --- MQTT LOGIC ---
   useEffect(() => {
-    const client = new Paho.Client(MQTT_BROKER, MQTT_PORT, CLIENT_ID);
+    const client = new Paho.Client(mqttConfig.broker, mqttConfig.port, CLIENT_ID);
+    clientRef.current = client;
 
     const onConnect = () => {
       setConnectionStatus('Connected');
       console.log('Connected to MQTT!');
-      client.subscribe(MQTT_TOPIC);
+      client.subscribe(mqttConfig.topic);
     };
 
     const onConnectionLost = (responseObject: { errorCode: number; errorMessage: string }) => {
@@ -113,7 +126,7 @@ export default function HomeScreen() {
         setSensorData(jsonPayload);
         console.log('Data updated:', jsonPayload);
         
-        // Save to Firebase (with throttling)
+        // Save to Firebase
         saveToFirebase(jsonPayload);
       } catch (e) {
         console.log('Error parsing JSON:', e);
@@ -127,7 +140,7 @@ export default function HomeScreen() {
     // Connect
     client.connect({
       onSuccess: onConnect,
-      useSSL: false,
+      useSSL: mqttConfig.useSSL,
       onFailure: (e: unknown) => {
         setConnectionStatus('Failed to Connect');
         console.log(e);
@@ -140,14 +153,14 @@ export default function HomeScreen() {
         client.disconnect();
       }
     };
-  }, []);
+  }, [mqttConfig]);
 
   // --- HELPER: GET STATUS COLOR ---
   const getStatusColor = () => {
     const s = sensorData.status || "";
-    if (s.includes("WARN") || s.includes("ALERT")) return "#ff4444"; // Red
-    if (s.includes("Normal")) return "#00C851"; // Green
-    return "#33b5e5"; // Blue (Default)
+    if (s.includes("WARN") || s.includes("ALERT")) return Colors.error;
+    if (s.includes("Normal")) return Colors.success;
+    return Colors.primary;
   };
 
   // --- HELPER: GET TREND ---
@@ -167,18 +180,24 @@ export default function HomeScreen() {
   // --- RENDER COMPONENT ---
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#1c2331" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.background} />
 
       {/* HEADER */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>💧 Smart Water Monitor</Text>
+        <View style={styles.headerTop}>
+          <Ionicons name="water" size={32} color={Colors.primary} />
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Tanzeem ul Tyari</Text>
+            <Text style={styles.headerSubtitle}>Smart Water Monitoring</Text>
+          </View>
+        </View>
         <View style={styles.statusRow}>
           <View style={styles.statusBadge}>
-            <View style={[styles.statusDot, { backgroundColor: connectionStatus === 'Connected' ? '#00C851' : '#ff4444' }]} />
+            <View style={[styles.statusDot, { backgroundColor: connectionStatus === 'Connected' ? Colors.success : Colors.error }]} />
             <Text style={styles.statusText}>MQTT: {connectionStatus}</Text>
           </View>
           <View style={styles.statusBadge}>
-            <View style={[styles.statusDot, { backgroundColor: firebaseStatus.includes('Synced') ? '#00C851' : '#ffbb33' }]} />
+            <View style={[styles.statusDot, { backgroundColor: firebaseStatus.includes('Synced') ? Colors.success : Colors.warning }]} />
             <Text style={styles.statusText}>Firebase: {firebaseStatus}</Text>
           </View>
         </View>
@@ -188,6 +207,7 @@ export default function HomeScreen() {
 
         {/* MAIN STATUS CARD */}
         <View style={[styles.statusCard, { backgroundColor: getStatusColor() }]}>
+          <Ionicons name="shield-checkmark" size={24} color={Colors.text} style={{ marginBottom: 8 }} />
           <Text style={styles.statusLabel}>SYSTEM STATUS</Text>
           <Text style={styles.statusValue}>{sensorData.status}</Text>
         </View>
@@ -195,11 +215,14 @@ export default function HomeScreen() {
         {/* SYNC INFO CARD */}
         <View style={styles.syncCard}>
           <View style={styles.syncInfo}>
-            <Text style={styles.syncLabel}>📊 Readings Saved</Text>
+            <Ionicons name="analytics" size={20} color={Colors.primary} />
+            <Text style={styles.syncLabel}>Readings Saved</Text>
             <Text style={styles.syncValue}>{readingCount}</Text>
           </View>
+          <View style={styles.syncDivider} />
           <View style={styles.syncInfo}>
-            <Text style={styles.syncLabel}>🕐 Last Sync</Text>
+            <Ionicons name="time" size={20} color={Colors.primary} />
+            <Text style={styles.syncLabel}>Last Sync</Text>
             <Text style={styles.syncValue}>{formatTime(lastSyncTime)}</Text>
           </View>
         </View>
@@ -212,7 +235,8 @@ export default function HomeScreen() {
             label="Temperature"
             value={sensorData.temp}
             unit="°C"
-            color="#FF8800"
+            color={Colors.temp}
+            icon={<MaterialCommunityIcons name="thermometer" size={24} color={Colors.temp} />}
             trend={getTrend(sensorData.temp, previousData?.temp)}
           />
 
@@ -221,7 +245,8 @@ export default function HomeScreen() {
             label="Humidity"
             value={sensorData.humidity}
             unit="%"
-            color="#0099CC"
+            color={Colors.humidity}
+            icon={<MaterialCommunityIcons name="water-percent" size={24} color={Colors.humidity} />}
             trend={getTrend(sensorData.humidity, previousData?.humidity)}
           />
 
@@ -230,7 +255,8 @@ export default function HomeScreen() {
             label="pH Level"
             value={sensorData.ph}
             unit="pH"
-            color="#9933CC"
+            color={Colors.ph}
+            icon={<MaterialCommunityIcons name="flask" size={24} color={Colors.ph} />}
             isAlert={sensorData.ph < 6 || sensorData.ph > 8.5}
             trend={getTrend(sensorData.ph, previousData?.ph)}
           />
@@ -240,7 +266,8 @@ export default function HomeScreen() {
             label="Nitrate"
             value={sensorData.nitrate}
             unit="ppm"
-            color="#CC0000"
+            color={Colors.nitrate}
+            icon={<MaterialCommunityIcons name="molecule" size={24} color={Colors.nitrate} />}
             isAlert={sensorData.nitrate > 50}
             trend={getTrend(sensorData.nitrate, previousData?.nitrate)}
           />
@@ -250,7 +277,8 @@ export default function HomeScreen() {
             label="Turbidity"
             value={sensorData.turbidity}
             unit="%"
-            color="#795548"
+            color={Colors.turbidity}
+            icon={<MaterialCommunityIcons name="blur" size={24} color={Colors.turbidity} />}
             trend={getTrend(sensorData.turbidity, previousData?.turbidity)}
           />
 
@@ -259,7 +287,8 @@ export default function HomeScreen() {
             label="Water Level"
             value={sensorData.level}
             unit="%"
-            color="#0d47a1"
+            color={Colors.level}
+            icon={<Ionicons name="water" size={24} color={Colors.level} />}
             isAlert={sensorData.level < 20}
             trend={getTrend(sensorData.level, previousData?.level)}
           />
@@ -271,21 +300,31 @@ export default function HomeScreen() {
 }
 
 // --- REUSABLE SENSOR CARD COMPONENT ---
-const SensorCard = ({ label, value, unit, color, isAlert, trend }: SensorCardProps) => (
-  <View style={[styles.card, isAlert ? styles.cardAlert : null]}>
-    <Text style={[styles.cardLabel, { color: color }]}>{label}</Text>
+const SensorCard = ({ label, value, unit, color, icon, isAlert, trend }: SensorCardProps) => (
+  <View style={[styles.card, isAlert ? styles.cardAlert : null, { borderLeftColor: color }]}>
+    <View style={styles.cardHeader}>
+      {icon}
+      <Text style={[styles.cardLabel, { color }]}>{label}</Text>
+    </View>
     <View style={styles.valueRow}>
       <Text style={styles.cardValue}>
         {typeof value === 'number' ? value.toFixed(1) : value}
         <Text style={styles.cardUnit}>{unit}</Text>
       </Text>
       {trend && trend !== 'stable' && (
-        <Text style={[styles.trendIcon, { color: trend === 'up' ? '#00C851' : '#ff4444' }]}>
-          {trend === 'up' ? '↑' : '↓'}
-        </Text>
+        <Ionicons 
+          name={trend === 'up' ? 'arrow-up' : 'arrow-down'} 
+          size={18} 
+          color={trend === 'up' ? Colors.success : Colors.error} 
+        />
       )}
     </View>
-    {isAlert && <Text style={styles.alertText}>⚠️ WARNING</Text>}
+    {isAlert && (
+      <View style={styles.alertBadge}>
+        <Ionicons name="warning" size={12} color={Colors.error} />
+        <Text style={styles.alertText}>WARNING</Text>
+      </View>
+    )}
   </View>
 );
 
@@ -293,34 +332,48 @@ const SensorCard = ({ label, value, unit, color, isAlert, trend }: SensorCardPro
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f4f4f9',
+    backgroundColor: Colors.background,
+    paddingTop: 35,
   },
   header: {
     padding: 20,
     paddingBottom: 15,
-    backgroundColor: '#1c2331',
+    backgroundColor: Colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  headerTop: {
+    flexDirection: 'row',
     alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    elevation: 5,
+    gap: 12,
+  },
+  headerText: {
+    flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#fff',
+    color: Colors.text,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    marginTop: 2,
   },
   statusRow: {
     flexDirection: 'row',
-    marginTop: 10,
+    marginTop: 12,
     gap: 10,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   statusDot: {
     width: 8,
@@ -329,58 +382,61 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   statusText: {
-    color: '#aab',
+    color: Colors.textSecondary,
     fontSize: 11,
-  },
-  subHeader: {
-    color: '#aab',
-    marginTop: 5,
-    fontSize: 12,
+    fontWeight: '500',
   },
   scrollContainer: {
-    padding: 15,
+    padding: 16,
     paddingBottom: 30,
   },
   statusCard: {
     padding: 20,
-    borderRadius: 15,
-    marginBottom: 15,
+    borderRadius: 16,
+    marginBottom: 16,
     alignItems: 'center',
-    elevation: 3,
   },
   statusLabel: {
     color: 'rgba(255,255,255,0.8)',
-    fontWeight: 'bold',
-    marginBottom: 5,
+    fontWeight: '600',
+    fontSize: 12,
+    letterSpacing: 1,
   },
   statusValue: {
-    color: '#fff',
-    fontSize: 22,
+    color: Colors.text,
+    fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
-    textTransform: 'uppercase',
+    marginTop: 4,
   },
   syncCard: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 15,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    elevation: 2,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   syncInfo: {
+    flex: 1,
     alignItems: 'center',
+    gap: 4,
+  },
+  syncDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: Colors.border,
   },
   syncLabel: {
     fontSize: 12,
-    color: '#666',
-    marginBottom: 5,
+    color: Colors.textMuted,
   },
   syncValue: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1c2331',
+    color: Colors.text,
   },
   gridContainer: {
     flexDirection: 'row',
@@ -388,50 +444,57 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors.surface,
     width: '48%',
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 15,
-    elevation: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderLeftWidth: 5,
-    borderLeftColor: '#ddd',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   cardAlert: {
-    borderWidth: 2,
-    borderColor: 'red',
-    backgroundColor: '#fff0f0',
+    borderColor: Colors.error,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
   },
   cardLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    marginBottom: 5,
   },
   valueRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   cardValue: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
-    color: '#333',
+    color: Colors.text,
   },
   cardUnit: {
     fontSize: 14,
-    color: '#888',
-    marginLeft: 2,
+    color: Colors.textMuted,
   },
-  trendIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginLeft: 5,
+  alertBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
   },
   alertText: {
-    color: 'red',
+    color: Colors.error,
     fontSize: 10,
     fontWeight: 'bold',
-    marginTop: 5,
   }
 });
