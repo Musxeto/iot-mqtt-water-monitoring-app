@@ -1,7 +1,7 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { getLatestReadings, saveSensorReading } from '@/services/firestore';
+import { DEFAULT_MQTT_CONFIG, loadMQTTConfig, MQTTConfig } from '@/config/mqtt';
 import { Colors } from '@/constants/colors';
-import { loadMQTTConfig, MQTTConfig, DEFAULT_MQTT_CONFIG } from '@/config/mqtt';
+import { getLatestReadings, saveSensorReading } from '@/services/firestore';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Paho from 'paho-mqtt';
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';

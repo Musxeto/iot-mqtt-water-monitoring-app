@@ -1,11 +1,11 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { getAllReadings, SensorReading } from '@/services/firestore';
 import { Colors } from '@/constants/colors';
+import { getAllReadings, SensorReading } from '@/services/firestore';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Timestamp } from 'firebase/firestore';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Dimensions, RefreshControl, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LineChart } from 'react-native-chart-kit';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const screenWidth = Dimensions.get('window').width;
 

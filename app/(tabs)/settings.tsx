@@ -1,22 +1,22 @@
+import { DEFAULT_MQTT_CONFIG, loadMQTTConfig, MQTTConfig, resetMQTTConfig, saveMQTTConfig } from '@/config/mqtt';
+import { Colors } from '@/constants/colors';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StatusBar,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '@/constants/colors';
-import { DEFAULT_MQTT_CONFIG, loadMQTTConfig, MQTTConfig, resetMQTTConfig, saveMQTTConfig } from '@/config/mqtt';
 
 export default function SettingsScreen() {
   const [config, setConfig] = useState<MQTTConfig>(DEFAULT_MQTT_CONFIG);
