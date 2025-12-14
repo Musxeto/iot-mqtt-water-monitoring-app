@@ -1,13 +1,18 @@
 {
   "expo": {
-    "name": "Tanzeem ul Tyari",
+    "name": "Tanzeem ul Tyari Smart Water Monitoring",
     "slug": "tanzeem-ul-tyari",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/tanzeem_logo.jpeg",
     "scheme": "tanzeemultyari",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/tanzeem_logo.jpeg",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
     "ios": {
       "supportsTablet": true
     },
@@ -18,7 +23,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "predictiveBackGestureEnabled": false,
       "package": "com.tanzeemultyari.watermonitor"
     },
@@ -31,11 +36,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/tanzeem_logo.jpeg",
+          "imageWidth": 300,
           "resizeMode": "contain",
           "backgroundColor": "#0f172a",
           "dark": {
+            "image": "./assets/images/tanzeem_logo.jpeg",
             "backgroundColor": "#0f172a"
           }
         }
@@ -44,6 +50,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "80e095ee-1790-48b6-b84b-fd23675b9a8c"
+      }
     }
   }
 }

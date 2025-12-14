@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:1005549204720:android:7469d15d843e0e1a4e7e35",
+        "android_client_info": {
+          "package_name": "com.tanzeemultyari.watermonitor"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATw9Niq4SSdDT_juSH6zRy3f_Ke6iHyds"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:1005549204720:android:fb2cbe8b483c0ca84e7e35",
         "android_client_info": {
           "package_name": "weather.monitor.iot"
