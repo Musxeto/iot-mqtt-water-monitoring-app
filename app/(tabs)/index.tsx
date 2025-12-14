@@ -104,7 +104,15 @@ export default function HomeScreen() {
 
   // --- MQTT LOGIC ---
   useEffect(() => {
-    const client = new Paho.Client(mqttConfig.broker, mqttConfig.port, CLIENT_ID);
+    // Create MQTT client using host, port and path for WebSocket connections
+    // Paho.Client(host, port, path, clientId)
+  const host = mqttConfig.broker;
+  const port = Number(mqttConfig.port);
+  const path = (mqttConfig as any).path || '/mqtt';
+  const protocol = mqttConfig.useSSL ? 'wss' : 'ws';
+  const uri = `${protocol}://${host}:${port}${path}`;
+  // Use Paho.Client(host, port, path, clientId) for constructor
+  const client = new (Paho as any).Client(host, port, path, CLIENT_ID);
     clientRef.current = client;
 
     const onConnect = () => {
@@ -138,15 +146,34 @@ export default function HomeScreen() {
     client.onConnectionLost = onConnectionLost;
     client.onMessageArrived = onMessageArrived;
 
-    // Connect
-    client.connect({
-      onSuccess: onConnect,
-      useSSL: mqttConfig.useSSL,
-      onFailure: (e: unknown) => {
+    // Connect with options (hosts/ports/uris supported)
+    const connectOptions: any = {
+      onSuccess: () => {
+        console.log(`MQTT connected to ${uri}`);
+        onConnect();
+      },
+      onFailure: (e: any) => {
         setConnectionStatus('Failed to Connect');
-        console.log(e);
-      }
-    });
+        console.error('MQTT connect failure:', e);
+      },
+      useSSL: mqttConfig.useSSL,
+      reconnect: true,
+      timeout: 10,
+      hosts: [host],
+      ports: [port],
+    };
+
+    // Trace function to log lower-level events (use any cast to avoid type errors)
+    (client as any).trace = (trace: any) => {
+      console.debug('MQTT trace:', trace);
+    };
+
+    try {
+      client.connect(connectOptions);
+    } catch (err) {
+      console.error('MQTT connect threw error:', err);
+      setConnectionStatus('Failed to Connect');
+    }
 
     // Cleanup on unmount
     return () => {

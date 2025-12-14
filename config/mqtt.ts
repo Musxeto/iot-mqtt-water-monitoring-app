@@ -5,6 +5,7 @@ export const DEFAULT_MQTT_CONFIG = {
   broker: 'broker.hivemq.com',
   port: 8000,
   topic: 'semester_project/water_quality',
+  path: '/mqtt',
   useSSL: false,
 };
 
@@ -12,6 +13,7 @@ export interface MQTTConfig {
   broker: string;
   port: number;
   topic: string;
+  path?: string;
   useSSL: boolean;
 }
 
