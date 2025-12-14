@@ -1,9 +1,9 @@
 import { DEFAULT_MQTT_CONFIG, loadMQTTConfig, MQTTConfig } from '@/config/mqtt';
 import { Colors } from '@/constants/colors';
-import { getLatestReadings, saveSensorReading } from '@/services/firestore';
+import { getTotalReadingsCount, saveSensorReading } from '@/services/firestore';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Paho from 'paho-mqtt';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -52,6 +52,9 @@ export default function HomeScreen() {
   // Refs for tracking
   const sensorDataRef = useRef<SensorData>(sensorData);
   const clientRef = useRef<typeof Paho.Client.prototype | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const isConnectingRef = useRef<boolean>(false);
 
   // Keep ref updated with latest sensor data
   useEffect(() => {
@@ -71,117 +74,216 @@ export default function HomeScreen() {
     loadConfig();
   }, []);
 
+  // --- FIREBASE: Refresh reading count ---
+  const refreshReadingCount = useCallback(async () => {
+    try {
+      const count = await getTotalReadingsCount();
+      setReadingCount(count);
+      if (count > 0) {
+        setFirebaseStatus('Connected');
+      }
+    } catch (error) {
+      console.log('Could not load reading count:', error);
+    }
+  }, []);
+
   // --- FIREBASE: Save data on every message ---
-  const saveToFirebase = async (data: SensorData) => {
+  const saveToFirebase = useCallback(async (data: SensorData) => {
     try {
       setFirebaseStatus('Syncing...');
       await saveSensorReading(data);
       setLastSyncTime(new Date());
       setFirebaseStatus('Synced');
-      setReadingCount(prev => prev + 1);
+      
+      // Refresh the count after saving
+      refreshReadingCount();
+      
       console.log('Data saved to Firebase');
     } catch (error) {
       console.error('Firebase save error:', error);
       setFirebaseStatus('Sync failed');
     }
-  };
+  }, [refreshReadingCount]);
 
   // --- FIREBASE: Load initial reading count ---
   useEffect(() => {
-    const loadReadingCount = async () => {
-      try {
-        const readings = await getLatestReadings(100);
-        setReadingCount(readings.length);
-        if (readings.length > 0) {
-          setFirebaseStatus('Connected');
-        }
-      } catch (error) {
-        console.log('Could not load reading count:', error);
-      }
-    };
-    loadReadingCount();
-  }, []);
+    refreshReadingCount();
+  }, [refreshReadingCount]);
+
+  // --- FIREBASE: Periodically refresh reading count (every 30 seconds) ---
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refreshReadingCount();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [refreshReadingCount]);
 
   // --- MQTT LOGIC ---
   useEffect(() => {
-    // Create MQTT client using host, port and path for WebSocket connections
-    // Paho.Client(host, port, path, clientId)
-  const host = mqttConfig.broker;
-  const port = Number(mqttConfig.port);
-  const path = (mqttConfig as any).path || '/mqtt';
-  const protocol = mqttConfig.useSSL ? 'wss' : 'ws';
-  const uri = `${protocol}://${host}:${port}${path}`;
-  // Use Paho.Client(host, port, path, clientId) for constructor
-  const client = new (Paho as any).Client(host, port, path, CLIENT_ID);
-    clientRef.current = client;
-
-    const onConnect = () => {
-      setConnectionStatus('Connected');
-      console.log('Connected to MQTT!');
-      client.subscribe(mqttConfig.topic);
-    };
-
-    const onConnectionLost = (responseObject: { errorCode: number; errorMessage: string }) => {
-      if (responseObject.errorCode !== 0) {
-        setConnectionStatus('Lost Connection');
-        console.log('Connection Lost:', responseObject.errorMessage);
+    let client: typeof Paho.Client.prototype | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 10;
+    const BASE_RECONNECT_DELAY = 2000; // 2 seconds
+    
+    // Cleanup function
+    const cleanup = () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+      }
+      if (client && client.isConnected()) {
+        try {
+          client.disconnect();
+        } catch (err) {
+          console.log('Error during disconnect:', err);
+        }
       }
     };
 
-    const onMessageArrived = (message: { payloadString: string }) => {
-      try {
-        const jsonPayload = JSON.parse(message.payloadString);
-        setPreviousData(sensorDataRef.current);
-        setSensorData(jsonPayload);
-        console.log('Data updated:', jsonPayload);
+    // Connect function with retry logic
+    const connectToMQTT = () => {
+      if (isConnectingRef.current) {
+        console.log('Connection attempt already in progress');
+        return;
+      }
+
+      isConnectingRef.current = true;
+      
+      // Create MQTT client using host, port and path for WebSocket connections
+      const host = mqttConfig.broker;
+      const port = Number(mqttConfig.port);
+      const path = (mqttConfig as any).path || '/mqtt';
+      const protocol = mqttConfig.useSSL ? 'wss' : 'ws';
+      const uri = `${protocol}://${host}:${port}${path}`;
+      
+      // Create new client instance
+      client = new (Paho as any).Client(host, port, path, CLIENT_ID);
+      clientRef.current = client;
+
+      const onConnect = () => {
+        setConnectionStatus('Connected');
+        console.log('Connected to MQTT!');
+        reconnectAttempts = 0;
+        reconnectAttemptsRef.current = 0;
+        isConnectingRef.current = false;
         
-        // Save to Firebase
-        saveToFirebase(jsonPayload);
-      } catch (e) {
-        console.log('Error parsing JSON:', e);
+        // Subscribe to topic
+        try {
+          client?.subscribe(mqttConfig.topic);
+          console.log(`Subscribed to ${mqttConfig.topic}`);
+        } catch (err) {
+          console.error('Subscription error:', err);
+        }
+      };
+
+      const onConnectionLost = (responseObject: { errorCode: number; errorMessage: string }) => {
+        if (responseObject.errorCode !== 0) {
+          setConnectionStatus('Lost Connection');
+          console.log('Connection Lost:', responseObject.errorMessage);
+          isConnectingRef.current = false;
+          
+          // Attempt to reconnect with exponential backoff
+          if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            reconnectAttemptsRef.current = reconnectAttempts;
+            const delay = Math.min(BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1), 60000);
+            
+            console.log(`Reconnecting in ${delay / 1000}s (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+            setConnectionStatus(`Reconnecting in ${delay / 1000}s...`);
+            
+            reconnectTimeout = setTimeout(() => {
+              connectToMQTT();
+            }, delay);
+            reconnectTimeoutRef.current = reconnectTimeout;
+          } else {
+            setConnectionStatus('Max reconnection attempts reached');
+            console.log('Max reconnection attempts reached. Please refresh the app.');
+          }
+        }
+      };
+
+      const onMessageArrived = (message: { payloadString: string }) => {
+        try {
+          const jsonPayload = JSON.parse(message.payloadString);
+          setPreviousData(sensorDataRef.current);
+          setSensorData(jsonPayload);
+          console.log('Data updated:', jsonPayload);
+          
+          // Save to Firebase
+          saveToFirebase(jsonPayload);
+        } catch (e) {
+          console.log('Error parsing JSON:', e);
+        }
+      };
+
+      // Set callbacks
+      if (client) {
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
+      }
+
+      // Connect with options
+      const connectOptions: any = {
+        onSuccess: () => {
+          console.log(`MQTT connected to ${uri}`);
+          onConnect();
+        },
+        onFailure: (e: any) => {
+          setConnectionStatus('Failed to Connect');
+          console.error('MQTT connect failure:', e);
+          isConnectingRef.current = false;
+          
+          // Retry connection on failure
+          if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+            reconnectAttempts++;
+            reconnectAttemptsRef.current = reconnectAttempts;
+            const delay = Math.min(BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1), 60000);
+            
+            console.log(`Retrying connection in ${delay / 1000}s`);
+            setConnectionStatus(`Retrying in ${delay / 1000}s...`);
+            
+            reconnectTimeout = setTimeout(() => {
+              connectToMQTT();
+            }, delay);
+            reconnectTimeoutRef.current = reconnectTimeout;
+          }
+        },
+        useSSL: mqttConfig.useSSL,
+        timeout: 30, // Increased timeout to 30 seconds
+        keepAliveInterval: 60, // Send ping every 60 seconds
+        cleanSession: true, // Clean session for better reliability
+        reconnect: true, // Enable automatic reconnection
+        hosts: [host],
+        ports: [port],
+      };
+
+      // Trace function to log lower-level events
+      if (client) {
+        (client as any).trace = (trace: any) => {
+          console.debug('MQTT trace:', trace);
+        };
+
+        try {
+          setConnectionStatus('Connecting...');
+          client.connect(connectOptions);
+        } catch (err) {
+          console.error('MQTT connect threw error:', err);
+          setConnectionStatus('Failed to Connect');
+          isConnectingRef.current = false;
+        }
       }
     };
 
-    // Set callbacks
-    client.onConnectionLost = onConnectionLost;
-    client.onMessageArrived = onMessageArrived;
-
-    // Connect with options (hosts/ports/uris supported)
-    const connectOptions: any = {
-      onSuccess: () => {
-        console.log(`MQTT connected to ${uri}`);
-        onConnect();
-      },
-      onFailure: (e: any) => {
-        setConnectionStatus('Failed to Connect');
-        console.error('MQTT connect failure:', e);
-      },
-      useSSL: mqttConfig.useSSL,
-      reconnect: true,
-      timeout: 10,
-      hosts: [host],
-      ports: [port],
-    };
-
-    // Trace function to log lower-level events (use any cast to avoid type errors)
-    (client as any).trace = (trace: any) => {
-      console.debug('MQTT trace:', trace);
-    };
-
-    try {
-      client.connect(connectOptions);
-    } catch (err) {
-      console.error('MQTT connect threw error:', err);
-      setConnectionStatus('Failed to Connect');
-    }
+    // Initial connection
+    connectToMQTT();
 
     // Cleanup on unmount
     return () => {
-      if (client.isConnected()) {
-        client.disconnect();
-      }
+      cleanup();
     };
-  }, [mqttConfig]);
+  }, [mqttConfig, saveToFirebase]);
 
   // --- HELPER: GET STATUS COLOR ---
   const getStatusColor = () => {

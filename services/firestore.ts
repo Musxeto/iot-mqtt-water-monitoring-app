@@ -3,6 +3,7 @@ import { db } from '@/config/firebase';
 import {
     addDoc,
     collection,
+    getCountFromServer,
     getDocs,
     limit,
     onSnapshot,
@@ -73,6 +74,20 @@ export const getLatestReadings = async (count: number = 500): Promise<SensorRead
     return readings;
   } catch (error) {
     console.error('Error getting readings:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get the total count of all sensor readings
+ */
+export const getTotalReadingsCount = async (): Promise<number> => {
+  try {
+    const coll = collection(db, COLLECTION_NAME);
+    const snapshot = await getCountFromServer(coll);
+    return snapshot.data().count;
+  } catch (error) {
+    console.error('Error getting total count:', error);
     throw error;
   }
 };
