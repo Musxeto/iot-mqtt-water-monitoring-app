@@ -1,4 +1,4 @@
-# Weather Monitor — Smart Water Monitoring (IoT)
+# tanzeem ul tyari — Smart Water Monitoring (IoT)
 
 A water-themed React Native + Expo app for monitoring IoT sensor data (water level, temperature, turbidity, etc.) streamed over MQTT and stored in Firebase/Firestore. The app includes a Dashboard, Analytics (graphs), and Settings for configuring the MQTT broker.
 
